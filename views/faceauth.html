@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Image Stream</title>
+</head>
+<body>
+
+    <h1>Authenticating your face, please stay still</h1>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <h3 id="webmsg"></h3>
+
+    <script>
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        let stream;
+        let ws;
+        let reconnectAttempts = 0;
+
+        function connectWebSocket() {
+            ws = new WebSocket("ws://localhost:4000");
+
+            ws.onopen = function() {
+                console.log("WebSocket connected.");
+                reconnectAttempts = 0; // Reset attempts on successful connection
+            };
+
+            ws.onmessage = function(event) {
+                const msg = JSON.parse(event.data);
+
+                if (msg.status) {
+                    document.getElementById("webmsg").innerHTML = msg.message;
+
+                    if (msg.success) {
+                        ws.close();
+                        stopCamera();
+                        alert("Successfully Authenticated!");
+                        window.location.href = 'dashboard.html';
+                    }
+                } else {
+                    ws.close();
+                    stopCamera();
+                    alert("Auth Failed!");
+                    window.location.href = 'logout.html';
+                }
+            };
+
+            ws.onclose = function() {
+                console.log("WebSocket connection closed.");
+                retryWebSocket();
+            };
+
+            ws.onerror = function(error) {
+                console.error("WebSocket error:", error);
+                ws.close();
+            };
+        }
+
+        function retryWebSocket() {
+            reconnectAttempts++;
+            let delay = Math.min(5000, reconnectAttempts * 1000); // Max delay: 5s
+            console.log(`Reconnecting in ${delay / 1000} seconds...`);
+            setTimeout(connectWebSocket, delay);
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function captureAndSendImage() {
+            const ctx = canvas.getContext("2d");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = canvas.toDataURL("image/jpeg").split(",")[1]; // Extract base64
+            const token = window.localStorage.getItem("token");
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "image", image: imageData, data: token, first: false }));
+                console.log("Image sent to WebSocket server");
+            }
+        }
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(s => {
+                stream = s;
+                video.srcObject = stream;
+                setInterval(captureAndSendImage, 1000);
+            })
+            .catch(err => console.error("Error accessing camera:", err));
+
+        connectWebSocket();
+    </script>
+</body>
+</html>

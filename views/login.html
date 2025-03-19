@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .login-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #28a745;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #218838;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login</h2>
+        <input type="email" id="email" placeholder="Email" value="sidhpuratirth5126@gmail.com" required>
+        <input type="password" id="password" placeholder="Password" value="pass@123" required>
+        <button onclick="login()">Login</button>
+        <button onclick="register()">Register</button>
+
+        <p class="error" id="error-message"></p>
+    </div>
+
+    <script>
+        async function register() {
+            window.location.href = 'register.html';
+        }
+
+
+        window.onload = () => {
+            const token = window.localStorage.getItem('token');
+            if(token) {
+                window.location.href = 'faceauth.html';
+                return;
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = ''
+
+            try {
+                const response = await fetch('http://localhost:4000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // alert('Login Successful!');
+                    console.log({data});
+                    window.localStorage.setItem('token', data.token);
+
+                    if(data.faceStatus == false) {
+                        // to detect the face for the first time
+                        window.location.href = 'faceDetect.html'
+                    }
+                    else if (data.faceStatus == true) {
+                        window.location.href = 'faceauth.html'
+                    }
+                    
+                    // Redirect or perform any action after login
+                } else {
+                    errorMessage.textContent = data.message || 'Login failed';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Error connecting to server';
+            }
+        }
+    </script>
+</body>
+</html>

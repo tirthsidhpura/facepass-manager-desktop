@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Logout</h1>
+</body>
+<script>
+    window.onload = () => {
+        window.localStorage.removeItem("token");
+        window.location.href = "login.html";  // Redirect to login page after logout.  // Replace "/login" with your login page URL.  // Note: Make sure you have a login page at /login URL.  // Also, make sure your server is configured to handle logout requests.  // You can achieve this by adding a logout endpoint in your server-side code.  // For example, in Express.js, you can add a route like this: app.
+    }
+</script>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Processing..!</h1>
+</body>
+<script>
+     
+     const stg = async () => {
+
+
+        const token = window.localStorage.getItem("token")
+
+        const response = await fetch('http://localhost:4000/api/auth/face/detect/first', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // alert('Login Successful!');
+                    // console.log({data});
+                    // window.localStorage.setItem('token', data.token);
+
+                    if(data.faceStatus == false) {
+                        // to detect the face for the first time
+                        window.location.href = 'faceDetect.html'
+                    }
+                    else if (data.faceStatus == true) {
+                        window.location.href = 'faceauth.html'
+
+                    }
+                    
+                    // Redirect or perform any action after login
+                } else {
+                    errorMessage.textContent = data.message || 'Login failed';
+                }
+            
+     }
+
+     stg();
+     </script>
+</html>

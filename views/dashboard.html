@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+
+    <title>Hello from Dashboard!</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <style>
+    #passId {
+      display: none;
+    }
+
+    
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .btn {
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+        }
+        .btn-edit { background-color: #4CAF50; color: white; }
+        .btn-delete { background-color: #f44336; color: white; }
+        .password-field {
+            cursor: pointer;
+            color: blue;
+            text-decoration: underline;
+        }
+    </style>
+  <body>
+    <h1>Hello from Dashboard !</h1>
+    <p>👋</p>
+    <button onclick="showCreatePassword()">create +</button>
+
+    <div class="container" id="passId">
+      <input type="text" name="name" id="name" placeholder="name">
+      <input type="text" name="password" id="password" placeholder="password">
+      <button onclick="createPassword()">Add Password</button>
+    </div>
+
+    <br>
+
+    <table>
+      <thead>
+          <tr>
+              <th>#</th>
+              <th>Website</th>
+              <th>Password</th>
+              <th>Actions</th>
+          </tr>
+      </thead>
+      <tbody id="passwordList">
+          <!-- Data will be appended here -->
+      </tbody>
+  </table>
+
+  </body>
+
+  <script>
+    const token = window.localStorage.getItem('token');
+    const showCreatePassword = () => {
+      console.log('called')
+      const passId = document.getElementById('passId');
+      passId.style.display = passId.style.display == 'none'? 'block' : 'none';
+    }
+    const createPassword = async () => {
+    try {
+        const name = document.getElementById("name").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        if (!name || !password) {
+            alert("Name and password cannot be empty");
+            return;
+        }
+
+        if (password.length < 6) {
+            alert("Password must be at least 6 characters long");
+            return;
+        }
+
+        const response = await fetch('http://localhost:4000/api/password/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ name, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to create password');
+        }
+
+        alert('Added successfully!');
+    } catch (error) {
+        console.error("Error:", error.message);
+        alert(error.message);
+    }
+};
+
+  </script>
+
+  <script>
+    function loadPasswords() {
+      fetch("http://localhost:4000/api/password/get", {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json()
+          ;
+        })
+        .then(data => {
+          const passwordList = document.getElementById("passwordList");
+          passwordList.innerHTML = ""; // Clear existing data
+
+          if (data.status && data.passwordData && data.passwordData.length > 0) {
+            data.passwordData.forEach((item, index) => {
+              const row = document.createElement("tr");
+
+              // Create the numbering cell
+              const numCell = document.createElement("td");
+              numCell.textContent = index + 1;
+              row.appendChild(numCell);
+
+              // Create the website cell
+              const siteCell = document.createElement("td");
+              siteCell.textContent = item.name;
+              row.appendChild(siteCell);
+
+              // Create the password cell
+              const passCell = document.createElement("td");
+              passCell.classList.add("password-field");
+              passCell.textContent = "Click to View";
+              passCell.onclick = function() {
+                togglePassword(passCell, item.password);
+              };
+              row.appendChild(passCell);
+
+              // Create the actions cell with Edit and Delete buttons
+              const actionsCell = document.createElement("td");
+
+              const editBtn = document.createElement("button");
+              editBtn.className = "btn btn-edit";
+              editBtn.textContent = "Edit";
+              editBtn.onclick = function() {
+                editPassword(item.sno);
+              };
+              actionsCell.appendChild(editBtn);
+
+              const deleteBtn = document.createElement("button");
+              deleteBtn.className = "btn btn-delete";
+              deleteBtn.textContent = "Delete";
+              deleteBtn.onclick = function() {
+                deletePassword(item.sno);
+              };
+              actionsCell.appendChild(deleteBtn);
+
+              row.appendChild(actionsCell);
+
+              passwordList.appendChild(row);
+            });
+          } else {
+            passwordList.innerHTML = '<tr><td colspan="4">No data available</td></tr>';
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching password data:", error);
+          document.getElementById("passwordList").innerHTML = '<tr><td colspan="4">Error loading data</td></tr>';
+        });
+    }
+
+    // Toggle password view function
+    function togglePassword(element, password) {
+      element.textContent = element.textContent === "Click to View" ? password : "Click to View";
+    }
+
+    // Placeholder for editing a password entry
+    function editPassword(id) {
+      alert("Edit password with ID: " + id);
+      // Implement edit functionality here
+    }
+
+    // Placeholder for deleting a password entry
+    function deletePassword(id) {
+      alert("Delete password with ID: " + id);
+      // Implement delete functionality here
+    }
+
+    // Load passwords when the document is ready
+    document.addEventListener("DOMContentLoaded", loadPasswords);
+
+  </script>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Image Stream</title>
+</head>
+<body>
+
+    <h1>Capturing your face please stay Still</h1>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <script>
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("canvas");
+        const ws = new WebSocket("ws://localhost:4000");
+
+        let stream;
+
+        // Access the camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(s => {
+                stream = s;
+                video.srcObject = stream;
+                setInterval(captureAndSendImage, 100);
+            })
+            .catch(err => console.error("Error accessing camera:", err));
+
+        function captureAndSendImage() {
+            const ctx = canvas.getContext("2d");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = canvas.toDataURL("image/jpeg").split(",")[1]; // Extract base64
+            const data = window.localStorage.getItem("token");
+            ws.send(JSON.stringify({ type: "image", image: imageData, data, first: true }));
+            console.log("Image sent to WebSocket server");
+        }
+
+        // Handle incoming messages from the WebSocket server
+        ws.onmessage = function(event) {
+            const message = event.data;
+            console.log("Message from server:", message);
+
+            const msg = JSON.parse(message);
+
+            // if(msg)
+            // Close the WebSocket connection
+            ws.close();
+
+            // Stop the camera stream
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            // Show an alert to the user
+            alert("Processing complete. Camera and WebSocket connection closed.");
+            // window.location.href('afterfirstdetect.html');
+             window.location.href = 'afterfirstdetect.html'
+            // Optionally, you can update the UI to indicate that the process is complete
+            document.querySelector("h1").textContent = "Processing complete!";
+        };
+
+        // Handle WebSocket connection close
+        ws.onclose = function() {
+            console.log("WebSocket connection closed.");
+        };
+
+        // Handle WebSocket errors
+        ws.onerror = function(error) {
+            console.error("WebSocket error:", error);
+        };
+    </script>
+</body>
+</html>
