@@ -77,11 +77,14 @@
                 
                 if (response.ok) {
                     alert('Register Successful!');
-                    window.location.href('login.html')
+                    // window.location.href('login.html')
+                    window.localStorage.setItem('token', data.token);
+                    window.location.href = 'faceDetect.html'
                     // Redirect or perform any action after login
                 } else {
                     errorMessage.textContent = data.message || 'Login failed';
                     window.location.href('login.html')
+                    window.location.href = 'faceDetect.html'
                 }
             } catch (error) {
                 window.location.href('login.html')

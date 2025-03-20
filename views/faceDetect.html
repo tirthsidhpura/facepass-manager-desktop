@@ -7,9 +7,10 @@
 </head>
 <body>
 
-    <h1>Capturing your face please stay Still</h1>
+    <h1>Capturing your face, please stay still</h1>
     <video id="video" autoplay></video>
     <canvas id="canvas" style="display: none;"></canvas>
+    <h3 id="messagegiven"></h3>
 
     <script>
         const video = document.getElementById("video");
@@ -17,26 +18,33 @@
         const ws = new WebSocket("ws://localhost:4000");
 
         let stream;
+        let imageSent = false; // Flag to check if image has been acknowledged
 
         // Access the camera
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(s => {
                 stream = s;
                 video.srcObject = stream;
-                setInterval(captureAndSendImage, 100);
+                setInterval(captureAndSendImage, 1000);
             })
             .catch(err => console.error("Error accessing camera:", err));
 
         function captureAndSendImage() {
-            const ctx = canvas.getContext("2d");
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const imageData = canvas.toDataURL("image/jpeg").split(",")[1]; // Extract base64
-            const data = window.localStorage.getItem("token");
-            ws.send(JSON.stringify({ type: "image", image: imageData, data, first: true }));
-            console.log("Image sent to WebSocket server");
+            // Only capture and send image if the previous one has been acknowledged
+            if (!imageSent) {
+                const ctx = canvas.getContext("2d");
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = canvas.toDataURL("image/jpeg").split(",")[1]; // Extract base64
+                const data = window.localStorage.getItem("token");
+                ws.send(JSON.stringify({ type: "image", image: imageData, data, first: true }));
+                console.log("Image sent to WebSocket server");
+
+                // Set flag to prevent sending until acknowledgment is received
+                imageSent = true;
+            }
         }
 
         // Handle incoming messages from the WebSocket server
@@ -45,22 +53,43 @@
             console.log("Message from server:", message);
 
             const msg = JSON.parse(message);
+            console.log({msg})
+            if (msg && msg.message == "Maximum of 20 images already stored") {
+                console.log("Image captured successfully");
 
-            // if(msg)
-            // Close the WebSocket connection
-            ws.close();
+                // Reset flag to allow the next image to be sent
+                imageSent = false;
 
-            // Stop the camera stream
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
+                // Optionally, update the UI to indicate success
+                document.querySelector("h3").textContent = "Image captured successfully!";
+
+                // You can proceed with further actions if needed
+                alert("Processing complete. Camera and WebSocket connection closed.");
+                
+                // Close WebSocket connection
+                ws.close();
+
+                // Stop the camera stream
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+
+                // Redirect to another page
+                window.location.href = 'afterfirstdetect.html';
             }
+            else if (msg && msg.message == "imageCaptured") {
+                console.log("Image captured successfully");
 
-            // Show an alert to the user
-            alert("Processing complete. Camera and WebSocket connection closed.");
-            // window.location.href('afterfirstdetect.html');
-             window.location.href = 'afterfirstdetect.html'
-            // Optionally, you can update the UI to indicate that the process is complete
-            document.querySelector("h1").textContent = "Processing complete!";
+                // Reset flag to allow the next image to be sent
+                imageSent = false;
+                document.querySelector("h3").textContent = "Face detected!";
+            }
+            else if (msg && msg.message == "imagenotCaptured") {
+                console.log("Image not captured successfully");
+                document.querySelector("h3").textContent = "Face not detected!";
+                // Reset flag to allow the next image to be sent
+                imageSent = false;
+            }
         };
 
         // Handle WebSocket connection close
